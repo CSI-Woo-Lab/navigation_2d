@@ -14,7 +14,7 @@ if sys.version_info < (2,7):
 
 setup(name='navigation2d',
       version='1.0.0',
-      packages=['2d_navi_with_obstacle'],
+      packages=['navigation_2d'],
       python_requires='>=3.7',
       install_requires=read_requirements_file('requirements.txt'),
       description='2d navigation environment with Box2D',
