@@ -12,7 +12,7 @@ if sys.version_info < (2,7):
     print('Sorry, Python < 2.7 is not supported, please install Python 3.7')
     sys.exit()
 
-setup(name='navigation_2d',
+setup(name='navigation2d',
       version='1.0.0',
       packages=['2d_navi_with_obstacle'],
       python_requires='>=3.7',

@@ -11,7 +11,7 @@ from collections import deque
 from config import *
 from util import *
 from objects import Obstacles
-import two_dim_navi_with_obstacle
+import gym_extensions
 
 def to_rect(obstacle_pos):
     axis = obstacle_pos[2]
