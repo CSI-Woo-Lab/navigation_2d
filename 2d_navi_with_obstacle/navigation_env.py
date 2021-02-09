@@ -8,9 +8,10 @@ import gym
 from gym import spaces
 from gym.utils import seeding, EzPickle
 from collections import deque
-from navigation_obs_2d.config import *
-from navigation_obs_2d.util import *
-from navigation_obs_2d.objects import Obstacles
+from config import *
+from util import *
+from objects import Obstacles
+import two_dim_navi_with_obstacle
 
 def to_rect(obstacle_pos):
     axis = obstacle_pos[2]
@@ -51,53 +52,49 @@ class ContactDetector(contactListener):
 
 
 class NavigationEnvDefault(gym.Env, EzPickle):
-    metadata = {
-        'render.modes': ['human', 'rgb_array'],
-        'video.frames_per_second': FPS
-    }
-
-    '''
-    dictionary representation of observation 
-    it is useful handling dict space observation, 
-    classifying local observation and global observation, 
-    lazy evaluation of observation space; whenever we add or delete some observation information   
-    '''
-    observation_meta_data = {
-        'position':gym.spaces.Box(np.array([0, 0]), np.array([W, H]), dtype=np.float32),
-        'goal_position':gym.spaces.Box(np.array([0, 0]), np.array([W, H]), dtype=np.float32),
-        'lidar': gym.spaces.Box(low=0, high=1, shape=(16, )),
-        'energy': gym.spaces.Box(low=0, high=1, shape=(1, )),
-        'obstacle_speed': gym.spaces.Box(low=-1, high=1, shape=(len(OBSTACLE_POSITIONS), )),
-        'obstacle_position': gym.spaces.Box(low=0, high=1, shape=(2 * len(OBSTACLE_POSITIONS), ))
-    }
-
-    # meta data keys. It is used to force order to get observation.
-    # We may use ordered dict, but saving key with list is more economic
-    # rather than create ordered dict whenever steps proceed
-    observation_meta_data_keys = ['position', 'goal_position', 'lidar', 'energy', 'obstacle_speed', 'obstacle_position']
-
-    def __init__(self, max_obs_range=3,  max_speed=2, initial_speed=2, **kwargs):
+    def __init__(self, task_args, max_obs_range=3,  max_speed=3, initial_speed=2, **kwargs):
         super(EzPickle, self).__init__()
+        self.metadata = {
+            'render.modes': ['human', 'rgb_array'],
+            'video.frames_per_second': FPS
+        }
+
+        '''
+        dictionary representation of observation 
+        it is useful handling dict space observation, 
+        classifying local observation and global observation, 
+        lazy evaluation of observation space; whenever we add or delete some observation information   
+        '''
+        self.observation_meta_data = {
+            'position': gym.spaces.Box(np.array([0, 0]), np.array([W, H]), dtype=np.float32),
+            'distance': gym.spaces.Box(np.array([0]), np.array([np.sqrt(W ** 2 + H ** 2)]), dtype=np.float32),
+            'lidar': gym.spaces.Box(low=0, high=1, shape=(16,)),
+            'energy': gym.spaces.Box(low=0, high=1, shape=(1,)),
+            'obstacle_speed': gym.spaces.Box(low=-1, high=1, shape=(len(task_args['OBSTACLE_POSITIONS']),)),
+            'obstacle_position': gym.spaces.Box(low=0, high=1, shape=(2 * len(task_args['OBSTACLE_POSITIONS']),))
+        }
+
+        # meta data keys. It is used to force order to get observation.
+        # We may use ordered dict, but saving key with list is more economic
+        # rather than create ordered dict whenever steps proceed
+        self.observation_meta_data_keys = ['position', 'distance', 'lidar', 'energy', 'obstacle_speed',
+                                           'obstacle_position']
+
         self._ezpickle_args = ( )
         self._ezpickle_kwargs = {}
         self.np_random = 7777
         self.verbose = False
         self.scores = None
-        self.episode_counter = 0
 
         self.seed()
         self.viewer = None
         self.world = Box2D.b2World(gravity=(0, 0))
         self.moon = None
         self.drone = None
-        self.obstacle = None
-        self.disturbs = []
         self.walls = []
         self.goal = None
-        self.obs_tracker = None
         self.obs_range_plt = None
         self.max_obs_range = max_obs_range
-        self.prev_reward = None
         self.num_beams = 16
         self.lidar = None
         self.drawlist = None
@@ -109,7 +106,8 @@ class NavigationEnvDefault(gym.Env, EzPickle):
         p2 = (W - 0.5, 0.5)
         self.sky_polys = [[p1, p2, (p2[0], H-0.5), (p1[0], H-0.5)]]
         self.position_intrinsic_reward = None
-        self.obstacles = Obstacles(self.world, max_speed)
+        self.obstacles = Obstacles(self.world, max_speed, task_args)
+        self.task_args = task_args
 
         self.reset()
         self.game_over = False
@@ -121,7 +119,7 @@ class NavigationEnvDefault(gym.Env, EzPickle):
 
     @property
     def drone_start_pos(self):
-        return
+        return denormalize_position(np.array([0.5, 0.5]), W ,H)
 
     @property
     def observation_space(self):
@@ -150,13 +148,13 @@ class NavigationEnvDefault(gym.Env, EzPickle):
 
     def dict_observation(self):
         position = normalize_position(self.drone.position, W, H)
-        goal_position = normalize_position(self.goal.position, W, H)
+        distance = np.linalg.norm(normalize_position(self.drone.position, W, H) - (normalize_position(self.goal.position, W, H)))
         lidar = [l.fraction for l in self.lidar]
         obstacle_speed = self.obstacles.speeds
         obstacle_position = self.obstacles.positions(self.drone.position)
         dict_obs = {
             'position':position,
-            'goal_position': goal_position,
+            'distance': distance,
             'lidar': lidar,
             'energy': self.energy,
             'obstacle_speed': obstacle_speed,
@@ -214,8 +212,7 @@ class NavigationEnvDefault(gym.Env, EzPickle):
     def _build_drone(self):
         # create controller object
         while True:
-            drone_pos = (int(np.random.randint(1, 10)), int(np.random.randint(1, 5)))
-            self.drone = self.world.CreateDynamicBody(position=drone_pos, angle=0.0,
+            self.drone = self.world.CreateDynamicBody(position=self.drone_start_pos, angle=0.0,
                                                       fixtures=fixtureDef(shape=polygonShape(vertices=[(x / SCALE, y / SCALE) for x, y in DRONE_POLY]),
                                                                           density=5.0, friction=0.1, categoryBits=0x0010,
                                                                           maskBits=0x003, restitution=0.0))
@@ -227,10 +224,10 @@ class NavigationEnvDefault(gym.Env, EzPickle):
                 self.game_over = False
             else:
                 break
-        return drone_pos
+        return self.drone_start_pos
 
     def _build_goal(self):
-        goal_pos = GOAL_POS[np.random.randint(len(GOAL_POS))]
+        goal_pos = self.task_args['Goal']
         self.goal = self.world.CreateStaticBody(position=goal_pos, angle=0.0,
                                                 fixtures=fixtureDef(shape=polygonShape(vertices=[(x / SCALE, y / SCALE) for x, y in DRONE_POLY]),
                                                                     density=5.0, friction=0.1, categoryBits=0x002,
@@ -293,7 +290,6 @@ class NavigationEnvDefault(gym.Env, EzPickle):
 
         self._build_wall()
         # create obstacles
-        print("?????????")
         self.obstacles.build_obstacles()
         drone_pos = self._build_drone()
         # create goal
@@ -369,24 +365,10 @@ class NavigationEnvDefault(gym.Env, EzPickle):
 
 
 class NavigationEnvAcc(NavigationEnvDefault):
-    observation_meta_data = {
-        'position': gym.spaces.Box(np.array([0, 0]), np.array([W, H]), dtype=np.float32),
-        'goal_position': gym.spaces.Box(np.array([0, 0]), np.array([W, H]), dtype=np.float32),
-        'lidar': gym.spaces.Box(low=0, high=1, shape=(16,)),
-        'energy': gym.spaces.Box(low=0, high=1, shape=(1,)),
-        'obstacle_speed': gym.spaces.Box(low=-1, high=1, shape=(len(OBSTACLE_POSITIONS),)),
-        'obstacle_position': gym.spaces.Box(low=0, high=1, shape=(2 * len(OBSTACLE_POSITIONS),)),
-        'velocity' : gym.spaces.Box(np.array([-3, -3]), np.array([3, 3]), dtype=np.float32)
-    }
-
-    # meta data keys. It is used to force order to get observation.
-    # We may use ordered dict, but saving key with list is more economic
-    # rather than create ordered dict whenever steps proceed
-    observation_meta_data_keys = ['position', 'goal_position', 'lidar', 'energy', 'obstacle_speed', 'obstacle_position',
-                                  'velocity']
-
-    def __init__(self, max_obs_range=3,  max_speed=5, initial_speed=2, **kwargs):
-        super().__init__(max_obs_range, max_speed, initial_speed, )
+    def __init__(self, obstacles_args, max_obs_range=3, max_speed=5, initial_speed=2, **kwargs):
+        super().__init__(obstacles_args, max_obs_range, max_speed, initial_speed, )
+        self.observation_meta_data['velocity'] = gym.spaces.Box(np.array([-3, -3]), np.array([3, 3]), dtype=np.float32)
+        self.observation_meta_data_keys.append('velocity')
 
     def dict_observation(self):
         dict_obs = super().dict_observation()
@@ -429,10 +411,35 @@ class NavigationEnvAcc(NavigationEnvDefault):
         return obs, reward, done, info
 
 
+class NavigationEnvAccLidarObs(NavigationEnvAcc):
+    def __init__(self, obstacles_args, max_obs_range=3,  max_speed=5, initial_speed=2, **kwargs):
+        super().__init__(obstacles_args, max_obs_range, max_speed, initial_speed, )
+        self.observation_meta_data = {
+            'position': gym.spaces.Box(np.array([0, 0]), np.array([W, H]), dtype=np.float32),
+            'distance': gym.spaces.Box(np.array([0]), np.array([np.sqrt(W ** 2 + H ** 2)]), dtype=np.float32),
+            'lidar': gym.spaces.Box(low=0, high=1, shape=(16,)),
+            'energy': gym.spaces.Box(low=0, high=1, shape=(1,)),
+            'velocity': gym.spaces.Box(np.array([-3, -3]), np.array([3, 3]), dtype=np.float32)
+        }
+        self.observation_meta_data_keys = ['position', 'lidar', 'energy', 'distance' 'velocity']
+
+    def dict_observation(self):
+        position = normalize_position(self.drone.position, W, H)
+        distance = np.linalg.norm(normalize_position(self.drone.position, W, H) - (normalize_position(self.goal.position, W, H)))
+        lidar = [l.fraction for l in self.lidar]
+        dict_obs = {
+            'position': position,
+            'distance': distance,
+            'lidar': lidar,
+            'energy': self.energy
+        }
+        return dict_obs
+
+
 if __name__ == '__main__':
-    env = NavigationEnvAcc()
+    env = gym.make('Navi-Acc-Full-Obs-Task1-v0')
     env.reset()
     done = False
     while not done:
-        _, _, done,_ = env.step(np.zeros(2))
+        _, _, done,_ = env.step([0, 0])
         env.render()
