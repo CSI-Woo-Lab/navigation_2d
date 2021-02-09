@@ -11,7 +11,6 @@ from collections import deque
 from config import *
 from util import *
 from objects import Obstacles
-import gym_extensions
 
 def to_rect(obstacle_pos):
     axis = obstacle_pos[2]
@@ -52,7 +51,7 @@ class ContactDetector(contactListener):
 
 
 class NavigationEnvDefault(gym.Env, EzPickle):
-    def __init__(self, task_args, max_obs_range=3,  max_speed=3, initial_speed=2, **kwargs):
+    def __init__(self, task_args, max_obs_range=3,  max_speed=2, initial_speed=2, **kwargs):
         super(EzPickle, self).__init__()
         self.metadata = {
             'render.modes': ['human', 'rgb_array'],
@@ -434,12 +433,3 @@ class NavigationEnvAccLidarObs(NavigationEnvAcc):
             'energy': self.energy
         }
         return dict_obs
-
-
-if __name__ == '__main__':
-    env = gym.make('Navi-Acc-Full-Obs-Task1-v0')
-    env.reset()
-    done = False
-    while not done:
-        _, _, done,_ = env.step([0, 0])
-        env.render()

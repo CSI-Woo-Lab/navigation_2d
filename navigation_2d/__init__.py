@@ -5,15 +5,15 @@ from config import *
 
 custom_envs = {}
 for idx, obs_conf in enumerate(config_set):
-    custom_envs['Navi-Vel-Full-Obs-Task%d-v0'.format(idx)] = dict(
+    custom_envs['Navi-Vel-Full-Obs-Task{}-v0'.format(idx)] = dict(
                  path='navigation_2d:NavigationEnvDefault',
                  max_episode_steps=1000,
                  kwargs=dict(obstacles_args=obs_conf))
-    custom_envs['Navi-Acc-Full-Obs-Task%d-v0'.format(idx)] = dict(
+    custom_envs['Navi-Acc-Full-Obs-Task{}-v0'.format(idx)] = dict(
                  path='navigation_2d:NavigationEnvAcc',
                  max_episode_steps=1000,
                  kwargs=dict(obstacles_args=obs_conf))
-    custom_envs['Navi-Acc-Lidar-Obs-Task%d-v0'.format(idx)] = dict(
+    custom_envs['Navi-Acc-Lidar-Obs-Task{}-v0'.format(idx)] = dict(
                  path='navigation_2d:NavigationEnvAccLidarObs',
                  max_episode_steps=1000,
                  kwargs=dict(obstacles_args=obs_conf))

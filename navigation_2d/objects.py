@@ -1,4 +1,7 @@
-from config import *
+import numpy as np
+import copy
+from util import normalize_position
+from config import W, H
 from Box2D.b2 import (edgeShape, circleShape, fixtureDef, polygonShape, revoluteJointDef, contactListener, distance)
 
 class Obstacles(object):
@@ -8,7 +11,7 @@ class Obstacles(object):
         self.speed_table = np.zeros(len(self.args['OBSTACLE_POSITIONS']))
         self.obstacles = []
         self.max_speed = max_speed
-        self.min_speed = 2
+        self.min_speed = 0.5
 
     def build_obstacles(self):
         for i in range(len(self.args['OBSTACLE_POSITIONS'])):
@@ -95,12 +98,13 @@ class Obstacle(object):
         self.dynamic_body.linearVelocity.Set(next_velocity[0], next_velocity[1])
 
     def set_circular_vel(self, init=False):
-        tuning_vec = (self.move_range[1][0] - self.position[0], self.move_range[1][1] - self.position[1])
-        moving_vec = ((self.move_range[1][1] - self.position[1])/5, -(self.move_range[1][0] - self.position[0])/5)
+        tuning_vec = np.array([self.move_range[1][0] - self.position[0], self.move_range[1][1] - self.position[1]])
+        moving_vec = np.array([(self.move_range[1][1] - self.position[1])/5, -(self.move_range[1][0] - self.position[0])/5])
+
         if self.distance < np.linalg.norm(tuning_vec):
-            self.dynamic_body.linearVelocity.Set(moving_vec[0]+tuning_vec[0]/100, moving_vec[1]+tuning_vec[1]/100)
+            self.dynamic_body.linearVelocity.Set(moving_vec[0]+tuning_vec[0]/10, moving_vec[1]+tuning_vec[1]/10)
         elif self.distance < np.linalg.norm(tuning_vec):
-            self.dynamic_body.linearVelocity.Set(moving_vec[0]-tuning_vec[0]/100, moving_vec[1]-tuning_vec[1]/100)
+            self.dynamic_body.linearVelocity.Set(moving_vec[0]-tuning_vec[0]/10, moving_vec[1]-tuning_vec[1]/10)
         else:
             self.dynamic_body.linearVelocity.Set(moving_vec[0], moving_vec[1])
 
