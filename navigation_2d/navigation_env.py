@@ -424,10 +424,12 @@ class NavigationEnvAccLidarObs(NavigationEnvAcc):
         position = normalize_position(self.drone.position, W, H)
         distance = np.linalg.norm(normalize_position(self.drone.position, W, H) - (normalize_position(self.goal.position, W, H)))
         lidar = [l.fraction for l in self.lidar]
+        velocity = self.drone.linearVelocity
         dict_obs = {
             'position': position,
             'distance': distance,
             'lidar': lidar,
-            'energy': self.energy
+            'energy': self.energy,
+            'velocity': velocity
         }
         return dict_obs
