@@ -8,9 +8,9 @@ import gym
 from gym import spaces
 from gym.utils import seeding, EzPickle
 from collections import deque
-from config import *
-from util import *
-from objects import Obstacles
+from .config import *
+from .util import *
+from .objects import Obstacles
 
 def to_rect(obstacle_pos):
     axis = obstacle_pos[2]

@@ -1,7 +1,7 @@
 import numpy as np
 import copy
-from util import normalize_position
-from config import W, H
+from .util import normalize_position
+from .config import W, H
 from Box2D.b2 import (edgeShape, circleShape, fixtureDef, polygonShape, revoluteJointDef, contactListener, distance)
 
 class Obstacles(object):

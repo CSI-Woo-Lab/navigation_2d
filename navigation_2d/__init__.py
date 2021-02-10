@@ -1,7 +1,7 @@
-from navigation_env import NavigationEnvDefault, NavigationEnvAcc, NavigationEnvAccLidarObs
+from .navigation_env import NavigationEnvDefault, NavigationEnvAcc, NavigationEnvAccLidarObs
 #
 from gym.envs import register
-from config import *
+from .config import *
 
 custom_envs = {}
 for idx, obs_conf in enumerate(config_set):
