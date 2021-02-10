@@ -22,7 +22,7 @@ gym.make('Navi-Vel-Full-Obs-Task17-v0')
 observation: ['position', 'distance', 'lidar', 'energy', 'obstacle_speed', 'obstacle_position', 'velocity']
 Action: accleration
 '''
-gym.make('Navi-Vel-Full-Obs-Task17-v0')
+gym.make('Navi-Acc-Full-Obs-Task5-v0')
 ~~~~
 
 ~~~~
@@ -30,7 +30,7 @@ gym.make('Navi-Vel-Full-Obs-Task17-v0')
 observation: ['position', 'distance', 'lidar', 'energy', 'velocity']
 Action: accleration
 '''
-gym.make('Navi-Vel-Full-Obs-Task17-v0')
+gym.make('Navi-Acc-Lidar-Obs-Task25-v0')
 ~~~~
 
 ## Info
