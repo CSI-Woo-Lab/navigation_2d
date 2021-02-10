@@ -418,7 +418,7 @@ class NavigationEnvAccLidarObs(NavigationEnvAcc):
             'energy': gym.spaces.Box(low=0, high=1, shape=(1,)),
             'velocity': gym.spaces.Box(np.array([-3, -3]), np.array([3, 3]), dtype=np.float32)
         }
-        self.observation_meta_data_keys = ['position', 'lidar', 'energy', 'distance' 'velocity']
+        self.observation_meta_data_keys = ['position', 'lidar', 'energy', 'distance', 'velocity']
 
     def dict_observation(self):
         position = normalize_position(self.drone.position, W, H)
