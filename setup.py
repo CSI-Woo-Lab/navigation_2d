@@ -13,7 +13,7 @@ if sys.version_info < (2,7):
     sys.exit()
 
 setup(name='navigation_2d',
-      version='1.0.1',
+      version='1.0.3',
       packages=['navigation_2d'],
       python_requires='>=3.7',
       install_requires=read_requirements_file('requirements.txt'),

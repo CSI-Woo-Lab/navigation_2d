@@ -107,8 +107,6 @@ class NavigationEnvDefault(gym.Env, EzPickle):
         self.position_intrinsic_reward = None
         self.obstacles = Obstacles(self.world, max_speed, task_args)
         self.task_args = task_args
-
-        self.reset()
         self.game_over = False
         self.prev_shaping = None
 
