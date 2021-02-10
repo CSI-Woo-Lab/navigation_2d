@@ -1,7 +1,7 @@
 import numpy as np
 import copy
 
-from util import denormalize_position, normalize_position
+from .util import denormalize_position, normalize_position
 
 # how many action do in 1 second
 FPS = 5
